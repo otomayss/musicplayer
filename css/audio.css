@@ -302,6 +302,20 @@ body {
     top: 0;
     width: 25%;
     background-color: rgb(29, 40, 32);
+    /* 添加以下滚动相关属性 */
+    overflow-y: auto;  /* 允许垂直滚动 */
+    scrollbar-width: none;  /* Firefox隐藏滚动条 */
+}
+
+/* 为Chrome等浏览器隐藏滚动条（可选） */
+.music-list::-webkit-scrollbar {
+    display: none;
+}
+
+/* 同时建议限制列表内容区域的最大高度，确保滚动正常工作 */
+.all-list {
+    max-height: calc(100% - 120px);  /* 减去标题和边距的高度 */
+    overflow-y: inherit;  /* 继承父容器的滚动设置 */
 }
 
 .music-list-container {
