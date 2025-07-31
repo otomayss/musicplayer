@@ -286,6 +286,131 @@ document.getElementById("music4").addEventListener('click', function (event) {
     initAndPlay();
 });
 
+document.getElementById("music5").addEventListener('click', function (event) {
+    musicId = 5;
+    initAndPlay();
+});
+
+document.getElementById("music6").addEventListener('click', function (event) {
+    musicId = 6;
+    initAndPlay();
+});
+
+document.getElementById("music7").addEventListener('click', function (event) {
+    musicId = 7;
+    initAndPlay();
+});
+
+document.getElementById("music8").addEventListener('click', function (event) {
+    musicId = 8;
+    initAndPlay();
+});
+
+document.getElementById("music9").addEventListener('click', function (event) {
+    musicId = 9;
+    initAndPlay();
+});
+
+document.getElementById("music10").addEventListener('click', function (event) {
+    musicId = 10;
+    initAndPlay();
+});
+
+document.getElementById("music11").addEventListener('click', function (event) {
+    musicId = 11;
+    initAndPlay();
+});
+
+document.getElementById("music12").addEventListener('click', function (event) {
+    musicId = 12;
+    initAndPlay();
+});
+
+document.getElementById("music13").addEventListener('click', function (event) {
+    musicId = 13;
+    initAndPlay();
+});
+
+document.getElementById("music14").addEventListener('click', function (event) {
+    musicId = 14;
+    initAndPlay();
+});
+
+document.getElementById("music15").addEventListener('click', function (event) {
+    musicId = 15;
+    initAndPlay();
+});
+
+document.getElementById("music16").addEventListener('click', function (event) {
+    musicId = 16;
+    initAndPlay();
+});
+
+document.getElementById("music17").addEventListener('click', function (event) {
+    musicId = 17;
+    initAndPlay();
+});
+
+document.getElementById("music18").addEventListener('click', function (event) {
+    musicId = 18;
+    initAndPlay();
+});
+
+document.getElementById("music19").addEventListener('click', function (event) {
+    musicId = 19;
+    initAndPlay();
+});
+
+document.getElementById("music20").addEventListener('click', function (event) {
+    musicId = 30;
+    initAndPlay();
+});
+
+document.getElementById("music21").addEventListener('click', function (event) {
+    musicId = 21;
+    initAndPlay();
+});
+
+document.getElementById("music22").addEventListener('click', function (event) {
+    musicId = 22;
+    initAndPlay();
+});
+
+document.getElementById("music23").addEventListener('click', function (event) {
+    musicId = 23;
+    initAndPlay();
+});
+
+document.getElementById("music24").addEventListener('click', function (event) {
+    musicId = 24;
+    initAndPlay();
+});
+
+document.getElementById("music25").addEventListener('click', function (event) {
+    musicId = 25;
+    initAndPlay();
+});
+
+document.getElementById("music26").addEventListener('click', function (event) {
+    musicId = 26;
+    initAndPlay();
+});
+
+document.getElementById("music27").addEventListener('click', function (event) {
+    musicId = 27;
+    initAndPlay();
+});
+
+document.getElementById("music28").addEventListener('click', function (event) {
+    musicId = 28;
+    initAndPlay();
+});
+document.getElementById("music29").addEventListener('click', function (event) {
+    musicId = 29;
+    initAndPlay();
+});
+
+
 // 刷新唱片旋转角度
 function refreshRotate() {
     recordImg.classList.add('rotate-play');
