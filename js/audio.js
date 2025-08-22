@@ -159,7 +159,8 @@ let musicData = [
     ['于梓贝-夏天的风', '于梓贝-夏天的风'],
     ['张学友-相思风雨中', '张学友-相思风雨中'],
     ['周柏豪-够钟', '周柏豪-够钟'],
-    ['周慧敏-最爱', '周慧敏-最爱']
+    ['周慧敏-最爱', '周慧敏-最爱'],
+    ['欢喜就好', '陈雷']
 ];
 
 // 初始化音乐
@@ -409,6 +410,10 @@ document.getElementById("music29").addEventListener('click', function (event) {
     musicId = 29;
     initAndPlay();
 });
+document.getElementById("music30").addEventListener('click', function (event) {
+    musicId = 30;
+    initAndPlay();
+});
 
 
 // 刷新唱片旋转角度
@@ -451,3 +456,4 @@ function setNoVolumn() {
         volume.style.backgroundImage = "url('img/静音.png')";
     }
 }
+
