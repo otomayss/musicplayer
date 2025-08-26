@@ -1,459 +1,319 @@
-// 获取主题背景
-var body = document.getElementById('body');
-// 获取音频播放器对象
-var audio = document.getElementById('audioTag');
+// 1. 统一DOM元素获取（按功能分组，便于维护）
+const dom = {
+  body: document.getElementById('body'),
+  audio: document.getElementById('audioTag'),
+  // 歌曲信息
+  musicTitle: document.getElementById('music-title'),
+  recordImg: document.getElementById('record-img'),
+  author: document.getElementById('author-name'),
+  // 进度条相关
+  progress: document.getElementById('progress'),
+  progressTotal: document.getElementById('progress-total'),
+  playedTime: document.getElementById('playedTime'),
+  audioTime: document.getElementById('audioTime'),
+  // 控制按钮
+  mode: document.getElementById('playMode'),
+  skipForward: document.getElementById('skipForward'), // 上一首
+  playPause: document.getElementById('playPause'),    // 暂停/播放（原pause，命名更清晰）
+  skipBackward: document.getElementById('skipBackward'), // 下一首
+  volume: document.getElementById('volume'),
+  volumeTogger: document.getElementById('volumn-togger'), // 注意：原拼写volumn应为volume，建议HTML同步修改
+  // 其他功能
+  list: document.getElementById('list'),
+  speed: document.getElementById('speed'),
+  MV: document.getElementById('MV'),
+  closeList: document.getElementById('close-list'),
+  musicList: document.getElementById('music-list')
+};
 
-// 歌曲名
-var musicTitle = document.getElementById('music-title');
-// 歌曲海报
-var recordImg = document.getElementById('record-img');
-// 歌曲作者
-var author = document.getElementById('author-name');
+// 2. 状态变量集中管理（避免全局变量散乱）
+const state = {
+  musicId: 0,          // 当前播放歌曲序号
+  modeId: 1,           // 播放模式（1-单曲循环，2-列表循环，3-随机播放）
+  lastVolume: 70,      // 上一次音量（原lastVolumn，统一拼写）
+  playbackRates: [0.5, 1.0, 1.5, 2.0], // 倍速选项（便于循环切换）
+  currentSpeedIndex: 1 // 当前倍速索引（对应playbackRates，默认1.0X）
+};
 
-// 进度条
-var progress = document.getElementById('progress');
-// 总进度条
-var progressTotal = document.getElementById('progress-total');
-
-// 已进行时长
-var playedTime = document.getElementById('playedTime');
-// 总时长
-var audioTime = document.getElementById('audioTime');
-
-// 播放模式按钮
-var mode = document.getElementById('playMode');
-// 上一首
-var skipForward = document.getElementById('skipForward');
-// 暂停按钮
-var pause = document.getElementById('playPause');
-// 下一首
-var skipBackward = document.getElementById('skipBackward');
-// 音量调节
-var volume = document.getElementById('volume');
-// 音量调节滑块
-var volumeTogger = document.getElementById('volumn-togger');
-
-// 列表
-var list = document.getElementById('list');
-// 倍速
-var speed = document.getElementById('speed');
-// MV
-var MV = document.getElementById('MV');
-
-// 左侧关闭面板
-var closeList = document.getElementById('close-list');
-// 音乐列表面板
-var musicList = document.getElementById('music-list');
-
-// 暂停/播放功能实现
-pause.onclick = function (e) {
-    if (audio.paused) {
-        audio.play();
-        rotateRecord();
-        pause.classList.remove('icon-play');
-        pause.classList.add('icon-pause');
-    } else {
-        audio.pause();
-        rotateRecordStop();
-        pause.classList.remove('icon-pause');
-        pause.classList.add('icon-play');
-    }
-}
-
-// 更新进度条
-audio.addEventListener('timeupdate', updateProgress); // 监听音频播放时间并更新进度条
-function updateProgress() {
-    var value = audio.currentTime / audio.duration;
-    progress.style.width = value * 100 + '%';
-    playedTime.innerText = transTime(audio.currentTime);
-}
-
-//音频播放时间换算
-function transTime(value) {
-    var time = "";
-    var h = parseInt(value / 3600);
-    value %= 3600;
-    var m = parseInt(value / 60);
-    var s = parseInt(value % 60);
-    if (h > 0) {
-        time = formatTime(h + ":" + m + ":" + s);
-    } else {
-        time = formatTime(m + ":" + s);
-    }
-
-    return time;
-}
-
-// 格式化时间显示，补零对齐
-function formatTime(value) {
-    var time = "";
-    var s = value.split(':');
-    var i = 0;
-    for (; i < s.length - 1; i++) {
-        time += s[i].length == 1 ? ("0" + s[i]) : s[i];
-        time += ":";
-    }
-    time += s[i].length == 1 ? ("0" + s[i]) : s[i];
-
-    return time;
-}
-
-// 点击进度条跳到指定点播放
-progressTotal.addEventListener('mousedown', function (event) {
-    // 只有音乐开始播放后才可以调节，已经播放过但暂停了的也可以
-    if (!audio.paused || audio.currentTime != 0) {
-        var pgsWidth = parseFloat(window.getComputedStyle(progressTotal, null).width.replace('px', ''));
-        var rate = event.offsetX / pgsWidth;
-        audio.currentTime = audio.duration * rate;
-        updateProgress(audio);
-    }
-});
-
-// 点击列表展开音乐列表
-list.addEventListener('click', function (event) {
-    musicList.classList.remove("list-card-hide");
-    musicList.classList.add("list-card-show");
-    musicList.style.display = "flex";
-    closeList.style.display = "flex";
-    closeList.addEventListener('click', closeListBoard);
-});
-
-// 点击关闭面板关闭音乐列表
-function closeListBoard() {
-    musicList.classList.remove("list-card-show");
-    musicList.classList.add("list-card-hide");
-    closeList.style.display = "none";
-}
-
-// 存储当前播放的音乐序号
-var musicId = 0;
-
-// 后台音乐列表
-let musicData = [
-    ['洛春赋', '云汐'], 
-    ['Yesterday', 'Alok/Sofi Tukker'], 
-    ['江南烟雨色', '杨树人'], 
-    ['Vision pt.II', 'Vicetone'],
-    ['沉默是金', '张国荣'],
-    ['刘德华-我恨我痴心', '刘德华-我恨我痴心'],
-    ['卢冠廷-一生所爱', '卢冠廷-一生所爱'],
-    ['麦浚龙-耿耿于怀', '麦浚龙-耿耿于怀'],
-    ['梅艳芳-朦胧夜雨里', '梅艳芳-朦胧夜雨里'],
-    ['梅艳芳-似是故人来', '梅艳芳-似是故人来'],
-    ['欧阳耀莹-春娇与志明', '欧阳耀莹-春娇与志明'],
-    ['区瑞强-陌上归人', '区瑞强-陌上归人'],
-    ['孙耀威-爱的故事(上集)', '孙耀威-爱的故事(上集)'],
-    ['谭咏麟-爱在深秋', '谭咏麟-爱在深秋'],
-    ['谭咏麟-讲不出再见', '谭咏麟-讲不出再见'],
-    ['谭咏麟-一生中最爱', '谭咏麟-一生中最爱'],
-    ['王菲-容易受伤的女人', '王菲-容易受伤的女人'],
-    ['王菲-约定', '王菲-约定'],
-    ['王杰-谁明浪子心', '王杰-谁明浪子心'],
-    ['王力宏-好心分手', '王力宏-好心分手'],
-    ['巫启贤-太傻', '巫启贤-太傻'],
-    ['吴若希-越难越爱', '吴若希-越难越爱'],
-    ['吴雨霏-我本人', '吴雨霏-我本人'],
-    ['吴雨霏-吴哥窟', '吴雨霏-吴哥窟'],
-    ['许冠杰-半斤八两', '许冠杰-半斤八两'],
-    ['许冠杰-浪子心声', '许冠杰-浪子心声'],
-    ['于梓贝-夏天的风', '于梓贝-夏天的风'],
-    ['张学友-相思风雨中', '张学友-相思风雨中'],
-    ['周柏豪-够钟', '周柏豪-够钟'],
-    ['周慧敏-最爱', '周慧敏-最爱'],
-    ['欢喜就好', '陈雷']
+// 3. 歌曲数据（建议扩展结构，支持自定义封面/背景，更灵活）
+const musicData = [
+  ['洛春赋', '云汐'], 
+  ['Yesterday', 'Alok/Sofi Tukker'], 
+  ['江南烟雨色', '杨树人'], 
+  ['Vision pt.II', 'Vicetone'],
+  ['沉默是金', '张国荣'],
+  ['刘德华-我恨我痴心', '刘德华-我恨我痴心'],
+  ['卢冠廷-一生所爱', '卢冠廷-一生所爱'],
+  ['麦浚龙-耿耿于怀', '麦浚龙-耿耿于怀'],
+  ['梅艳芳-朦胧夜雨里', '梅艳芳-朦胧夜雨里'],
+  ['梅艳芳-似是故人来', '梅艳芳-似是故人来'],
+  ['欧阳耀莹-春娇与志明', '欧阳耀莹-春娇与志明'],
+  ['区瑞强-陌上归人', '区瑞强-陌上归人'],
+  ['孙耀威-爱的故事(上集)', '孙耀威-爱的故事(上集)'],
+  ['谭咏麟-爱在深秋', '谭咏麟-爱在深秋'],
+  ['谭咏麟-讲不出再见', '谭咏麟-讲不出再见'],
+  ['谭咏麟-一生中最爱', '谭咏麟-一生中最爱'],
+  ['王菲-容易受伤的女人', '王菲-容易受伤的女人'],
+  ['王菲-约定', '王菲-约定'],
+  ['王杰-谁明浪子心', '王杰-谁明浪子心'],
+  ['王力宏-好心分手', '王力宏-好心分手'],
+  ['巫启贤-太傻', '巫启贤-太傻'],
+  ['吴若希-越难越爱', '吴若希-越难越爱'],
+  ['吴雨霏-我本人', '吴雨霏-我本人'],
+  ['吴雨霏-吴哥窟', '吴雨霏-吴哥窟'],
+  ['许冠杰-半斤八两', '许冠杰-半斤八两'],
+  ['许冠杰-浪子心声', '许冠杰-浪子心声'],
+  ['于梓贝-夏天的风', '于梓贝-夏天的风'],
+  ['张学友-相思风雨中', '张学友-相思风雨中'],
+  ['周柏豪-够钟', '周柏豪-够钟'],
+  ['周慧敏-最爱', '周慧敏-最爱'],
+  ['欢喜就好', '陈雷']
 ];
 
-// 初始化音乐
+// 4. 工具函数（通用功能抽离，避免重复）
+/**
+ * 时间格式转换（秒 → 00:00 或 00:00:00）
+ * @param {number} value - 音频时间（秒）
+ * @returns {string} 格式化后的时间字符串
+ */
+function transTime(value) {
+  const h = Math.floor(value / 3600);
+  const m = Math.floor((value % 3600) / 60);
+  const s = Math.floor(value % 60);
+  // 补零逻辑简化（使用String.padStart）
+  const format = (num) => String(num).padStart(2, '0');
+  
+  return h > 0 
+    ? `${format(h)}:${format(m)}:${format(s)}` 
+    : `${format(m)}:${format(s)}`;
+}
+
+/**
+ * 唱片旋转控制
+ * @param {boolean} isRunning - 是否运行（true-播放，false-暂停）
+ */
+function controlRecordRotate(isRunning) {
+  dom.recordImg.style.animationPlayState = isRunning ? "running" : "paused";
+}
+
+// 5. 核心音乐功能
+/**
+ * 初始化音乐（设置音频源、更新歌曲信息）
+ */
 function initMusic() {
-    audio.src = "mp3/music" + musicId.toString() + ".mp3";
-    audio.load();
-    recordImg.classList.remove('rotate-play');
-    audio.ondurationchange = function () {
-        musicTitle.innerText = musicData[musicId][0];
-        author.innerText = musicData[musicId][1];
-        recordImg.style.backgroundImage = "url('img/record1"+".jpg')";
-        body.style.backgroundImage = "url('img/bg0"+".png')";
-        audioTime.innerText = transTime(audio.duration);
-        // 重置进度条
-        audio.currentTime = 0;
-        updateProgress();
-        refreshRotate();
-    }
+  const { musicId } = state;
+  // 设置音频源（拼接逻辑简化）
+  dom.audio.src = `mp3/music${musicId}.mp3`;
+  dom.audio.load();
+  
+  // 移除旋转类（避免重复添加）
+  dom.recordImg.classList.remove('rotate-play');
+  
+  // 音频时长加载完成后更新信息
+  dom.audio.ondurationchange = function () {
+    const [title, singer] = musicData[musicId];
+    dom.musicTitle.innerText = title;
+    dom.author.innerText = singer;
+    // 封面/背景：若后续支持自定义，可在musicData中添加字段（如[title, singer, cover, bg]）
+    dom.recordImg.style.backgroundImage = "url('img/record1.jpg')";
+    dom.body.style.backgroundImage = "url('img/bg0.png')";
+    
+    // 更新时长和进度条
+    dom.audioTime.innerText = transTime(dom.audio.duration);
+    dom.audio.currentTime = 0;
+    updateProgress();
+    
+    // 恢复唱片旋转状态
+    dom.recordImg.classList.add('rotate-play');
+    controlRecordRotate(!dom.audio.paused);
+  };
 }
-initMusic();
 
-// 初始化并播放
+/**
+ * 初始化并播放音乐
+ */
 function initAndPlay() {
-    initMusic();
-    pause.classList.remove('icon-play');
-    pause.classList.add('icon-pause');
-    audio.play();
-    rotateRecord();
+  initMusic();
+  // 更新播放按钮状态
+  dom.playPause.classList.remove('icon-play');
+  dom.playPause.classList.add('icon-pause');
+  // 播放音频并旋转唱片
+  dom.audio.play();
+  controlRecordRotate(true);
 }
 
-// 播放模式设置
-var modeId = 1;
-mode.addEventListener('click', function (event) {
-    modeId = modeId + 1;
-    if (modeId > 3) {
-        modeId = 1;
-    }
-    mode.style.backgroundImage = "url('img/mode"+modeId+".png')";
-});
+/**
+ * 更新进度条
+ */
+function updateProgress() {
+  const { currentTime, duration } = dom.audio;
+  const progressRate = currentTime / duration || 0; // 避免NaN
+  dom.progress.style.width = `${progressRate * 100}%`;
+  dom.playedTime.innerText = transTime(currentTime);
+}
 
-audio.onended = function () {
-    if (modeId == 2) {
-        // 跳转至下一首歌
-        musicId = (musicId + 1) % musicData.length;
+/**
+ * 更新音量（修复原逻辑bug：原timeupdate监听会频繁触发，改为滑块change监听）
+ */
+function updateVolume() {
+  const volumeValue = dom.volumeTogger.value;
+  dom.audio.volume = volumeValue / 100; // 音量范围0-1，用100更直观（建议HTML滑块max设为100）
+  
+  // 同步更新音量图标
+  dom.volume.style.backgroundImage = volumeValue == 0 
+    ? "url('img/静音.png')" 
+    : "url('img/音量.png')";
+}
+
+// 6. 事件监听绑定（统一管理，避免散落在代码中）
+function bindEvents() {
+  // 6.1 暂停/播放按钮
+  dom.playPause.addEventListener('click', function () {
+    if (dom.audio.paused) {
+      dom.audio.play();
+      controlRecordRotate(true);
+      this.classList.remove('icon-play');
+      this.classList.add('icon-pause');
+    } else {
+      dom.audio.pause();
+      controlRecordRotate(false);
+      this.classList.remove('icon-pause');
+      this.classList.add('icon-play');
     }
-    else if (modeId == 3) {
-        // 随机生成下一首歌的序号
-        var oldId = musicId;
-        while (true) {
-            musicId = Math.floor(Math.random() * musicData.length-1) + 0;
-            if (musicId != oldId) { break; }
+  });
+
+  // 6.2 音频时间更新（进度条）
+  dom.audio.addEventListener('timeupdate', updateProgress);
+
+  // 6.3 点击进度条跳转
+  dom.progressTotal.addEventListener('mousedown', function (e) {
+    // 只有音频加载完成后才允许跳转（避免duration为NaN）
+    if (dom.audio.duration) {
+      const pgsWidth = this.offsetWidth; // 简化获取宽度方式
+      const rate = e.offsetX / pgsWidth;
+      dom.audio.currentTime = dom.audio.duration * rate;
+      updateProgress();
+    }
+  });
+
+  // 6.4 音乐列表展开/关闭（优化事件绑定：closeList只需绑定一次）
+  dom.list.addEventListener('click', function () {
+    dom.musicList.classList.replace("list-card-hide", "list-card-show");
+    dom.musicList.style.display = "flex";
+    dom.closeList.style.display = "flex";
+  });
+
+  dom.closeList.addEventListener('click', function () {
+    dom.musicList.classList.replace("list-card-show", "list-card-hide");
+    this.style.display = "none";
+  });
+
+  // 6.5 播放模式切换（简化模式切换逻辑）
+  dom.mode.addEventListener('click', function () {
+    state.modeId = (state.modeId % 3) + 1; // 循环1→2→3→1
+    this.style.backgroundImage = `url('img/mode${state.modeId}.png')`;
+  });
+
+  // 6.6 音频播放结束（优化随机播放逻辑，避免死循环）
+  dom.audio.addEventListener('ended', function () {
+    const { modeId, musicId } = state;
+    const musicCount = musicData.length;
+
+    switch (modeId) {
+      case 2: // 列表循环
+        state.musicId = (musicId + 1) % musicCount;
+        break;
+      case 3: // 随机播放（修复原逻辑bug：Math.random范围错误）
+        let newId;
+        // 若只有1首歌，无需随机
+        if (musicCount === 1) {
+          newId = 0;
+        } else {
+          // 确保新ID与旧ID不同
+          do {
+            newId = Math.floor(Math.random() * musicCount);
+          } while (newId === musicId);
         }
+        state.musicId = newId;
+        break;
+      // case 1: 单曲循环（无需修改musicId，initMusic会重新加载当前歌曲）
     }
+
     initAndPlay();
-}
+  });
 
-// 上一首
-skipForward.addEventListener('click', function (event) {
-    musicId = musicId - 1;
-    if (musicId < 0) {
-        musicId = musicData.length-1;
-    }
+  // 6.7 上一首
+  dom.skipForward.addEventListener('click', function () {
+    state.musicId = (state.musicId - 1 + musicData.length) % musicData.length;
     initAndPlay();
-});
+  });
 
-// 下一首
-skipBackward.addEventListener('click', function (event) {
-    musicId = musicId + 1;
-    if (musicId > musicData.length-1) {
-        musicId = 0;
-    }
+  // 6.8 下一首
+  dom.skipBackward.addEventListener('click', function () {
+    state.musicId = (state.musicId + 1) % musicData.length;
     initAndPlay();
-});
+  });
 
-// 倍速功能（这里直接暴力解决了）
-speed.addEventListener('click', function (event) {
-    var speedText = speed.innerText;
-    if (speedText == "1.0X") {
-        speed.innerText = "1.5X";
-        audio.playbackRate = 1.5;
-    }
-    else if (speedText == "1.5X") {
-        speed.innerText = "2.0X";
-        audio.playbackRate = 2.0;
-    }
-    else if (speedText == "2.0X") {
-        speed.innerText = "0.5X";
-        audio.playbackRate = 0.5;
-    }
-    else if (speedText == "0.5X") {
-        speed.innerText = "1.0X";
-        audio.playbackRate = 1.0;
-    }
-});
+  // 6.9 倍速切换（简化逻辑，基于数组循环）
+  dom.speed.addEventListener('click', function () {
+    const { playbackRates, currentSpeedIndex } = state;
+    // 循环切换倍速索引
+    state.currentSpeedIndex = (currentSpeedIndex + 1) % playbackRates.length;
+    const currentSpeed = playbackRates[state.currentSpeedIndex];
+    // 更新UI和音频倍速
+    this.innerText = `${currentSpeed}X`;
+    dom.audio.playbackRate = currentSpeed;
+  });
 
-// MV功能
-MV.addEventListener('click', function (event) {
-    // 向新窗口传值
-    var storage_list = window.sessionStorage;
-    storage_list['musicId'] = musicId;
+  // 6.10 MV功能（简化存储逻辑）
+  dom.MV.addEventListener('click', function () {
+    sessionStorage.setItem('musicId', state.musicId);
     window.open("video.html");
-});
+  });
 
-// 暴力捆绑列表音乐
-document.getElementById("music0").addEventListener('click', function (event) {
-    musicId = 0;
-    initAndPlay();
-});
-document.getElementById("music1").addEventListener('click', function (event) {
-    musicId = 1;
-    initAndPlay();
-});
-document.getElementById("music2").addEventListener('click', function (event) {
-    musicId = 2;
-    initAndPlay();
-});
-document.getElementById("music3").addEventListener('click', function (event) {
-    musicId = 3;
-    initAndPlay();
-});
+  // 6.11 音乐列表项点击（核心优化：循环绑定，替代手动重复代码）
+  musicData.forEach((_, index) => {
+    const musicItem = document.getElementById(`music${index}`);
+    // 容错：若DOM不存在，避免报错
+    if (musicItem) {
+      musicItem.addEventListener('click', function () {
+        state.musicId = index;
+        initAndPlay();
+      });
+    }
+  });
 
-document.getElementById("music4").addEventListener('click', function (event) {
-    musicId = 4;
-    initAndPlay();
-});
+  // 6.12 音量调节（修复原逻辑：timeupdate监听改为滑块change监听，避免频繁触发）
+  dom.volumeTogger.addEventListener('input', updateVolume); // input实时更新，change松开后更新
 
-document.getElementById("music5").addEventListener('click', function (event) {
-    musicId = 5;
-    initAndPlay();
-});
+  // 6.13 静音切换
+  dom.volume.addEventListener('click', function () {
+    const { volumeTogger } = dom;
+    const { lastVolume } = state;
 
-document.getElementById("music6").addEventListener('click', function (event) {
-    musicId = 6;
-    initAndPlay();
-});
-
-document.getElementById("music7").addEventListener('click', function (event) {
-    musicId = 7;
-    initAndPlay();
-});
-
-document.getElementById("music8").addEventListener('click', function (event) {
-    musicId = 8;
-    initAndPlay();
-});
-
-document.getElementById("music9").addEventListener('click', function (event) {
-    musicId = 9;
-    initAndPlay();
-});
-
-document.getElementById("music10").addEventListener('click', function (event) {
-    musicId = 10;
-    initAndPlay();
-});
-
-document.getElementById("music11").addEventListener('click', function (event) {
-    musicId = 11;
-    initAndPlay();
-});
-
-document.getElementById("music12").addEventListener('click', function (event) {
-    musicId = 12;
-    initAndPlay();
-});
-
-document.getElementById("music13").addEventListener('click', function (event) {
-    musicId = 13;
-    initAndPlay();
-});
-
-document.getElementById("music14").addEventListener('click', function (event) {
-    musicId = 14;
-    initAndPlay();
-});
-
-document.getElementById("music15").addEventListener('click', function (event) {
-    musicId = 15;
-    initAndPlay();
-});
-
-document.getElementById("music16").addEventListener('click', function (event) {
-    musicId = 16;
-    initAndPlay();
-});
-
-document.getElementById("music17").addEventListener('click', function (event) {
-    musicId = 17;
-    initAndPlay();
-});
-
-document.getElementById("music18").addEventListener('click', function (event) {
-    musicId = 18;
-    initAndPlay();
-});
-
-document.getElementById("music19").addEventListener('click', function (event) {
-    musicId = 19;
-    initAndPlay();
-});
-
-document.getElementById("music20").addEventListener('click', function (event) {
-    musicId = 30;
-    initAndPlay();
-});
-
-document.getElementById("music21").addEventListener('click', function (event) {
-    musicId = 21;
-    initAndPlay();
-});
-
-document.getElementById("music22").addEventListener('click', function (event) {
-    musicId = 22;
-    initAndPlay();
-});
-
-document.getElementById("music23").addEventListener('click', function (event) {
-    musicId = 23;
-    initAndPlay();
-});
-
-document.getElementById("music24").addEventListener('click', function (event) {
-    musicId = 24;
-    initAndPlay();
-});
-
-document.getElementById("music25").addEventListener('click', function (event) {
-    musicId = 25;
-    initAndPlay();
-});
-
-document.getElementById("music26").addEventListener('click', function (event) {
-    musicId = 26;
-    initAndPlay();
-});
-
-document.getElementById("music27").addEventListener('click', function (event) {
-    musicId = 27;
-    initAndPlay();
-});
-
-document.getElementById("music28").addEventListener('click', function (event) {
-    musicId = 28;
-    initAndPlay();
-});
-document.getElementById("music29").addEventListener('click', function (event) {
-    musicId = 29;
-    initAndPlay();
-});
-document.getElementById("music30").addEventListener('click', function (event) {
-    musicId = 30;
-    initAndPlay();
-});
-
-
-// 刷新唱片旋转角度
-function refreshRotate() {
-    recordImg.classList.add('rotate-play');
-}
-
-// 使唱片旋转
-function rotateRecord() {
-    recordImg.style.animationPlayState = "running"
-}
-
-// 停止唱片旋转
-function rotateRecordStop() {
-    recordImg.style.animationPlayState = "paused"
-}
-
-// 存储上一次的音量
-var lastVolumn = 70
-
-// 滑块调节音量
-audio.addEventListener('timeupdate', updateVolumn);
-function updateVolumn() {
-    audio.volume = volumeTogger.value / 70;
-}
-
-// 点击音量调节设置静音
-volume.addEventListener('click', setNoVolumn);
-function setNoVolumn() {
     if (volumeTogger.value == 0) {
-        if (lastVolumn == 0) {
-            lastVolumn = 70;
-        }
-        volumeTogger.value = lastVolumn;
-        volume.style.backgroundImage = "url('img/音量.png')";
+      // 恢复音量（若上次也是0，默认恢复70）
+      volumeTogger.value = lastVolume || 70;
+    } else {
+      // 保存当前音量并静音
+      state.lastVolume = volumeTogger.value;
+      volumeTogger.value = 0;
     }
-    else {
-        lastVolumn = volumeTogger.value;
-        volumeTogger.value = 0;
-        volume.style.backgroundImage = "url('img/静音.png')";
-    }
+
+    // 同步更新音量
+    updateVolume();
+  });
 }
 
+// 7. 初始化（入口函数，统一启动）
+function init() {
+  // 初始化倍速显示
+  dom.speed.innerText = `${state.playbackRates[state.currentSpeedIndex]}X`;
+  // 初始化音乐
+  initMusic();
+  // 绑定所有事件
+  bindEvents();
+}
+
+// 启动应用
+init();
