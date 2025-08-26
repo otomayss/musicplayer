@@ -3,116 +3,546 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
-    <link rel="stylesheet" type="text/css" href="./css/audio.css">
+    <title>音乐播放器</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#1e40af',
+                        dark: '#1e293b',
+                        light: '#f1f5f9',
+                        accent: '#f97316'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .record-spin {
+                animation: spin 20s linear infinite;
+            }
+            .progress-hover {
+                height: 6px;
+            }
+            .btn-hover {
+                transition: all 0.2s ease;
+            }
+            .btn-hover:hover {
+                transform: scale(1.1);
+            }
+            .list-item-hover {
+                transition: all 0.2s ease;
+            }
+            .list-item-hover:hover {
+                background-color: rgba(59, 130, 246, 0.1);
+            }
+            .list-item-active {
+                background-color: rgba(59, 130, 246, 0.2);
+                color: #3b82f6;
+                font-weight: 500;
+            }
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        body {
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            transition: background-image 1s ease-in-out;
+        }
+
+        .music-list {
+            transform: translateX(100%);
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .music-list.open {
+            transform: translateX(0);
+        }
+
+        .pgs-total {
+            height: 4px;
+            transition: height 0.2s ease;
+        }
+
+        .pgs-total:hover {
+            height: 6px;
+        }
+
+        .volume-control {
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.2s ease;
+            pointer-events: none;
+        }
+
+        .volume-container:hover .volume-control {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: all;
+        }
+    </style>
 </head>
 
-<body id="body" background="./img/bg0.png">
-    <div class="upper-container">
-        <!-- 唱片背景 -->
-        <div class="record-container">
-            <div class="record-bg">
-                <div id="record-img" class="rotate-play"></div>
+<body id="body" class="bg-gradient-to-br from-dark to-slate-900 text-light min-h-screen font-sans">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- 上部容器：唱片和音乐信息 -->
+        <div class="upper-container flex flex-col md:flex-row items-center justify-center md:justify-between gap-8 mb-12 mt-6">
+            <!-- 唱片背景 -->
+            <div class="record-container relative">
+                <div class="record-bg w-64 h-64 md:w-80 md:h-80 rounded-full bg-slate-800 shadow-2xl flex items-center justify-center border-4 border-slate-700">
+                    <div id="record-img" class="w-56 h-56 md:w-72 md:h-72 rounded-full bg-gradient-to-br from-primary/80 to-secondary/80 shadow-inner flex items-center justify-center">
+                        <div class="w-16 h-16 rounded-full bg-dark border-4 border-slate-700"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 音乐介绍 -->
+            <div class="introduction-container w-full md:w-auto text-center md:text-left">
+                <div class="text-container p-6 bg-dark/60 backdrop-blur-md rounded-xl border border-slate-700/50 shadow-xl">
+                    <div id="music-title" class="text-[clamp(1.8rem,5vw,3rem)] font-bold mb-3 text-white leading-tight">音乐1</div>
+                    <div class="author-container text-[clamp(1rem,2vw,1.25rem)] text-slate-300">
+                        作者：<span id="author-name" class="text-primary">未知</span>
+                    </div>
+                    <div class="mt-6 flex flex-wrap gap-3 justify-center md:justify-start">
+                        <button class="bg-primary/90 hover:bg-primary text-white px-4 py-2 rounded-full flex items-center gap-2 btn-hover">
+                            <i class="fas fa-heart"></i> 收藏
+                        </button>
+                        <button class="bg-slate-700/90 hover:bg-slate-600 text-white px-4 py-2 rounded-full flex items-center gap-2 btn-hover">
+                            <i class="fas fa-share-alt"></i> 分享
+                        </button>
+                        <button class="bg-slate-700/90 hover:bg-slate-600 text-white px-4 py-2 rounded-full flex items-center gap-2 btn-hover">
+                            <i class="fas fa-download"></i> 下载
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
-        <!-- 音乐介绍 -->
-        <div class="introduction-container">
-            <div class="text-container">
-                <div id="music-title">音乐1</div>
-                <div class="author-container">作者：
-                    <span id="author-name">未知</span>
+        
+        <!-- 音乐播放器主要内容 -->
+        <div class="audio-box mb-8">
+            <div class="audio-container bg-dark/70 backdrop-blur-md rounded-2xl p-6 border border-slate-700/50 shadow-xl">
+                <audio id="audioTag" class="hidden"></audio>
+                
+                <!-- 进度条 -->
+                <div class="a-progress mb-6">
+                    <div class="pgs-total w-full bg-slate-700 rounded-full overflow-hidden cursor-pointer" id="progress-total">
+                        <div class="pgs-play bg-primary h-full rounded-full" id="progress" style="width: 0%;"></div>
+                    </div>
+                </div>
+                
+                <!-- 下排控制按钮 -->
+                <div class="a-controls flex flex-col md:flex-row items-center justify-between gap-6">
+                    <!-- 播放时长 -->
+                    <div class="time-container text-slate-300 min-w-[100px] text-center md:text-left">
+                        <span class="played-time" id="playedTime">00:00</span>&nbsp;/&nbsp;
+                        <span class="audio-time" id="audioTime">00:00</span>
+                    </div>
+                    
+                    <!-- 中间按钮 -->
+                    <div class="center-button-container flex items-center gap-4 md:gap-6">
+                        <!-- 播放模式 -->
+                        <div id="playMode" class="center-icon text-slate-300 hover:text-primary text-xl cursor-pointer btn-hover">
+                            <i class="fas fa-random"></i>
+                        </div>
+                        
+                        <!-- 上一首 -->
+                        <div id="skipForward" class="center-icon text-slate-300 hover:text-primary text-2xl cursor-pointer btn-hover">
+                            <i class="fas fa-step-backward"></i>
+                        </div>
+                        
+                        <!-- 暂停按钮 -->
+                        <div id="playPause" class="w-14 h-14 md:w-16 md:h-16 rounded-full bg-primary hover:bg-secondary flex items-center justify-center text-2xl md:text-3xl cursor-pointer shadow-lg btn-hover">
+                            <i class="fas fa-play" id="playIcon"></i>
+                        </div>
+                        
+                        <!-- 下一首 -->
+                        <div id="skipBackward" class="center-icon text-slate-300 hover:text-primary text-2xl cursor-pointer btn-hover">
+                            <i class="fas fa-step-forward"></i>
+                        </div>
+                        
+                        <!-- 音量调节 -->
+                        <div class="center-icon volume-container text-slate-300 hover:text-primary text-xl cursor-pointer">
+                            <i class="fas fa-volume-up" id="volumeIcon"></i>
+                            <input type="range" id="volumn-togger" name="change" value="70" min="0" max="100" step="1" 
+                                   class="volume-control absolute w-32 ml-8 accent-primary rounded-full">
+                        </div>
+                    </div>
+                    
+                    <!-- 后部按钮 -->
+                    <div class="bottom-button-container flex items-center gap-4 md:gap-6 min-w-[150px] justify-center md:justify-end">
+                        <!-- 列表 -->
+                        <div id="list" class="bottom-icon text-slate-300 hover:text-primary text-xl cursor-pointer btn-hover">
+                            <i class="fas fa-list"></i>
+                        </div>
+                        
+                        <!-- 倍速 -->
+                        <div id="speed" class="speed bg-slate-700/80 hover:bg-slate-600 px-3 py-1 rounded-full text-sm cursor-pointer btn-hover">1.0X</div>
+                        
+                        <!-- MV -->
+                        <div id="MV" class="bottom-icon text-slate-300 hover:text-primary text-xl cursor-pointer btn-hover">
+                            <i class="fas fa-video"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    <!-- 音乐播放器主要内容 -->
-    <div class="audio-box">
-        <div class="audio-container">
-            <audio id="audioTag"></audio>
-            <!-- 进度条 -->
-            <div class="a-progress">
-                <div class="pgs-total" id="progress-total">
-                    <div class="pgs-play" id="progress" style="width: 0%;"></div>
+    
+    <!-- 音乐列表 -->
+    <div class="close-list fixed inset-0 bg-black/50 z-40 hidden" id="close-list"></div>
+    <div class="music-list fixed top-0 right-0 h-full w-full md:w-96 bg-dark/95 backdrop-blur-lg z-50 overflow-y-auto border-l border-slate-700/50" id="music-list">
+        <div class="music-list-container p-6">
+            <div class="music-list-title flex justify-between items-center text-xl font-bold mb-6 pb-2 border-b border-slate-700">
+                <span>播放队列</span>
+                <div id="closeListBtn" class="text-slate-400 hover:text-white cursor-pointer">
+                    <i class="fas fa-times"></i>
                 </div>
             </div>
-            <!-- 下排控制按钮 -->
-            <div class="a-controls">
-                <!-- 播放时长 -->
-                <div class="time-container">
-                    <span class="played-time" id="playedTime">00:00</span>&nbsp;/&nbsp;
-                    <span class="audio-time" id="audioTime">00:00</span>
-                </div>
-                <!-- 中间按钮 -->
-                <div class="center-button-container">
-                    <!-- 播放模式 -->
-                    <div id="playMode" class="center-icon mode"></div>
-                    <!-- 上一首 -->
-                    <div id="skipForward" class="center-icon s-right"></div>
-                    <!-- 暂停按钮 -->
-                    <div id="playPause" class="icon-play"></div>
-                    <!-- 下一首 -->
-                    <div id="skipBackward" class="center-icon s-left"></div>
-                    <!-- 音量调节 -->
-                    <div id="volume" class="center-icon volume"></div>
-                    <!-- 音量悬浮窗 -->
-                    <input type="range" id="volumn-togger" name="change" value="70" min="0" max="100" step="1">
-                </div>
-                <!-- 后部按钮 -->
-                <div class="bottom-button-container">
-                    <!-- 列表 -->
-                    <div id="list" class="bottom-icon list"></div>
-                    <!-- 倍速 -->
-                    <div id="speed" class="speed">1.0X</div>
-                    <!-- MV -->
-                    <div id="MV" class="bottom-icon MV"></div>
-                </div>
+            <div class="all-list space-y-1">
+                <div id="music0" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">洛春赋</div>
+                <div id="music1" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">Yesterday</div>
+                <div id="music2" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">江南烟雨色</div>
+                <div id="music3" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">Vision pt.II</div>
+                <div id="music4" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">沉默是金</div>
+                <div id="music5" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">我恨我痴心</div>
+                <div id="music6" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">一生所爱</div>
+                <div id="music7" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">耿耿于怀</div>
+                <div id="music8" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">朦胧夜雨里</div>
+                <div id="music9" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">似是故人来</div>
+                <div id="music10" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">春娇与志明</div>
+                <div id="music11" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">陌上归人</div>
+                <div id="music12" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">爱的故事(上集)</div>
+                <div id="music13" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">爱在深秋</div>
+                <div id="music14" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">讲不出再见</div>
+                <div id="music15" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">一生中最爱</div>
+                <div id="music16" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">容易受伤的女人</div>
+                <div id="music17" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">约定</div>
+                <div id="music18" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">谁明浪子心</div>
+                <div id="music19" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">好心分手</div>
+                <div id="music20" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">太傻</div>
+                <div id="music21" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">越难越爱</div>
+                <div id="music22" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">我本人</div>
+                <div id="music23" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">吴哥窟</div>
+                <div id="music24" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">半斤八两</div>
+                <div id="music25" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">浪子心声</div>
+                <div id="music26" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">夏天的风</div>
+                <div id="music27" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">相思风雨中</div>
+                <div id="music28" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">够钟</div>
+                <div id="music29" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">最爱</div>
+                <div id="music30" class="list-item p-3 rounded-lg cursor-pointer list-item-hover">欢喜就好</div>
             </div>
         </div>
     </div>
 
-    <!-- 音乐列表 -->
-    <div class="close-list" id="close-list"></div>
-    <div class="music-list" id="music-list">
-        <div class="music-list-container">
-            <div class="music-list-title">播放队列</div>
-            <hr class="line">
-            <div class="all-list">
-                <div id="music0">洛春赋</div>
-                <div id="music1">Yesterday</div>
-                <div id="music2">江南烟雨色</div>
-                <div id="music3">Vision pt.II</div>
-                <div id="music4">沉默是金</div>
-                <div id="music5">我恨我痴心</div>
-                <div id="music6">一生所爱</div>
-                <div id="music7">耿耿于怀</div>
-                <div id="music8">朦胧夜雨里</div>
-                <div id="music9">似是故人来</div>
-                <div id="music10">春娇与志明</div>
-                <div id="music11">陌上归人</div>
-                <div id="music12">爱的故事(上集)</div>
-                <div id="music13">爱在深秋</div>
-                <div id="music14">讲不出再见</div>
-                <div id="music15">一生中最爱</div>
-                <div id="music16">容易受伤的女人</div>
-                <div id="music17">约定</div>
-                <div id="music18">谁明浪子心</div>
-                <div id="music19">好心分手</div>
-                <div id="music20">太傻</div>
-                <div id="music21">越难越爱</div>
-                <div id="music22">我本人</div>
-                <div id="music23">吴哥窟</div>
-                <div id="music24">半斤八两</div>
-                <div id="music25">浪子心声</div>
-                <div id="music26">夏天的风</div>
-                <div id="music27">相思风雨中</div>
-                <div id="music28">够钟</div>
-                <div id="music29">最爱</div>
-                <div id="music30">欢喜就好</div>
-            </div>
-        </div>
-    </div>
-    <script src="./js/audio.js"></script>
+    <script>
+        // 等待DOM加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取DOM元素
+            const audioTag = document.getElementById('audioTag');
+            const playPauseBtn = document.getElementById('playPause');
+            const playIcon = document.getElementById('playIcon');
+            const progress = document.getElementById('progress');
+            const progressTotal = document.getElementById('progress-total');
+            const playedTime = document.getElementById('playedTime');
+            const audioTime = document.getElementById('audioTime');
+            const volumeSlider = document.getElementById('volumn-togger');
+            const volumeIcon = document.getElementById('volumeIcon');
+            const playModeBtn = document.getElementById('playMode');
+            const speedBtn = document.getElementById('speed');
+            const skipForwardBtn = document.getElementById('skipForward');
+            const skipBackwardBtn = document.getElementById('skipBackward');
+            const listBtn = document.getElementById('list');
+            const closeListBtn = document.getElementById('closeListBtn');
+            const closeListOverlay = document.getElementById('close-list');
+            const musicList = document.getElementById('music-list');
+            const recordImg = document.getElementById('record-img');
+            const musicTitle = document.getElementById('music-title');
+            const authorName = document.getElementById('author-name');
+            const listItems = document.querySelectorAll('.list-item');
+            
+            // 音乐数据
+            const musicData = [
+                { title: "洛春赋", author: "未知艺术家" },
+                { title: "Yesterday", author: "The Beatles" },
+                { title: "江南烟雨色", author: "古风音乐人" },
+                { title: "Vision pt.II", author: "Various Artists" },
+                { title: "沉默是金", author: "张国荣" },
+                { title: "我恨我痴心", author: "刘德华" },
+                { title: "一生所爱", author: "卢冠廷" },
+                { title: "耿耿于怀", author: "麦浚龙" },
+                { title: "朦胧夜雨里", author: "梁朝伟" },
+                { title: "似是故人来", author: "梅艳芳" },
+                { title: "春娇与志明", author: "街道办/欧阳耀莹" },
+                { title: "陌上归人", author: "区瑞强" },
+                { title: "爱的故事(上集)", author: "孙耀威" },
+                { title: "爱在深秋", author: "谭咏麟" },
+                { title: "讲不出再见", author: "谭咏麟" },
+                { title: "一生中最爱", author: "谭咏麟" },
+                { title: "容易受伤的女人", author: "王菲" },
+                { title: "约定", author: "王菲" },
+                { title: "谁明浪子心", author: "王杰" },
+                { title: "好心分手", author: "卢巧音/王力宏" },
+                { title: "太傻", author: "巫启贤" },
+                { title: "越难越爱", author: "吴若希" },
+                { title: "我本人", author: "吴雨霏" },
+                { title: "吴哥窟", author: "吴雨霏" },
+                { title: "半斤八两", author: "许冠杰" },
+                { title: "浪子心声", author: "许冠杰" },
+                { title: "夏天的风", author: "温岚" },
+                { title: "相思风雨中", author: "张学友/汤宝如" },
+                { title: "够钟", author: "周柏豪" },
+                { title: "最爱", author: "周慧敏" },
+                { title: "欢喜就好", author: "陈雷" }
+            ];
+            
+            // 当前播放索引
+            let currentIndex = 0;
+            // 播放模式：0-顺序播放，1-单曲循环，2-随机播放
+            let playMode = 0;
+            // 播放速度
+            let playSpeed = 1.0;
+            
+            // 初始化页面
+            updateMusicInfo(currentIndex);
+            updateBrowserTitle();
+            
+            // 更新音乐信息
+            function updateMusicInfo(index) {
+                const music = musicData[index];
+                musicTitle.textContent = music.title;
+                authorName.textContent = music.author;
+                
+                // 更新列表项激活状态
+                listItems.forEach((item, i) => {
+                    if (i === index) {
+                        item.classList.add('list-item-active');
+                    } else {
+                        item.classList.remove('list-item-active');
+                    }
+                });
+            }
+            
+            // 更新浏览器标题
+            function updateBrowserTitle() {
+                const music = musicData[currentIndex];
+                document.title = `${music.title} - ${music.author} | 音乐播放器`;
+            }
+            
+            // 播放/暂停切换
+            playPauseBtn.addEventListener('click', togglePlayPause);
+            
+            function togglePlayPause() {
+                if (audioTag.paused) {
+                    audioTag.play().catch(e => console.error("播放失败:", e));
+                    playIcon.classList.remove('fa-play');
+                    playIcon.classList.add('fa-pause');
+                    recordImg.classList.add('record-spin');
+                } else {
+                    audioTag.pause();
+                    playIcon.classList.remove('fa-pause');
+                    playIcon.classList.add('fa-play');
+                    recordImg.classList.remove('record-spin');
+                }
+            }
+            
+            // 更新进度条
+            audioTag.addEventListener('timeupdate', updateProgress);
+            
+            function updateProgress() {
+                const percentage = (audioTag.currentTime / audioTag.duration) * 100;
+                progress.style.width = `${percentage}%`;
+                
+                // 更新时间显示
+                playedTime.textContent = formatTime(audioTag.currentTime);
+                audioTime.textContent = formatTime(audioTag.duration);
+            }
+            
+            // 格式化时间为mm:ss
+            function formatTime(seconds) {
+                if (isNaN(seconds)) return "00:00";
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+            
+            // 点击进度条跳转
+            progressTotal.addEventListener('click', seek);
+            
+            function seek(e) {
+                const rect = progressTotal.getBoundingClientRect();
+                const pos = (e.clientX - rect.left) / rect.width;
+                audioTag.currentTime = pos * audioTag.duration;
+            }
+            
+            // 音量控制
+            volumeSlider.addEventListener('input', adjustVolume);
+            
+            function adjustVolume() {
+                audioTag.volume = volumeSlider.value / 100;
+                
+                // 更新音量图标
+                if (audioTag.volume === 0) {
+                    volumeIcon.classList.remove('fa-volume-up', 'fa-volume-down');
+                    volumeIcon.classList.add('fa-volume-mute');
+                } else if (audioTag.volume < 0.5) {
+                    volumeIcon.classList.remove('fa-volume-up', 'fa-volume-mute');
+                    volumeIcon.classList.add('fa-volume-down');
+                } else {
+                    volumeIcon.classList.remove('fa-volume-down', 'fa-volume-mute');
+                    volumeIcon.classList.add('fa-volume-up');
+                }
+            }
+            
+            // 切换播放模式
+            playModeBtn.addEventListener('click', changePlayMode);
+            
+            function changePlayMode() {
+                playMode = (playMode + 1) % 3;
+                
+                // 更新播放模式图标
+                const icon = playModeBtn.querySelector('i');
+                switch(playMode) {
+                    case 0: // 顺序播放
+                        icon.classList.remove('fa-repeat', 'fa-random');
+                        icon.classList.add('fa-list');
+                        break;
+                    case 1: // 单曲循环
+                        icon.classList.remove('fa-list', 'fa-random');
+                        icon.classList.add('fa-repeat');
+                        break;
+                    case 2: // 随机播放
+                        icon.classList.remove('fa-list', 'fa-repeat');
+                        icon.classList.add('fa-random');
+                        break;
+                }
+            }
+            
+            // 切换播放速度
+            speedBtn.addEventListener('click', changeSpeed);
+            
+            function changeSpeed() {
+                const speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+                const currentSpeedIndex = speeds.indexOf(playSpeed);
+                const nextSpeedIndex = (currentSpeedIndex + 1) % speeds.length;
+                playSpeed = speeds[nextSpeedIndex];
+                audioTag.playbackRate = playSpeed;
+                speedBtn.textContent = `${playSpeed}X`;
+            }
+            
+            // 上一首
+            skipForwardBtn.addEventListener('click', playPrevious);
+            
+            function playPrevious() {
+                if (playMode === 2) { // 随机播放模式
+                    currentIndex = getRandomIndex();
+                } else {
+                    currentIndex = (currentIndex - 1 + musicData.length) % musicData.length;
+                }
+                updateMusicInfo(currentIndex);
+                updateBrowserTitle();
+                // 这里应该加载并播放新的音频文件
+                // audioTag.src = `path/to/music${currentIndex}.mp3`;
+                // audioTag.play();
+                // 模拟播放效果
+                audioTag.currentTime = 0;
+                if (audioTag.paused) togglePlayPause();
+            }
+            
+            // 下一首
+            skipBackwardBtn.addEventListener('click', playNext);
+            
+            function playNext() {
+                if (playMode === 2) { // 随机播放模式
+                    currentIndex = getRandomIndex();
+                } else {
+                    currentIndex = (currentIndex + 1) % musicData.length;
+                }
+                updateMusicInfo(currentIndex);
+                updateBrowserTitle();
+                // 这里应该加载并播放新的音频文件
+                // audioTag.src = `path/to/music${currentIndex}.mp3`;
+                // audioTag.play();
+                // 模拟播放效果
+                audioTag.currentTime = 0;
+                if (audioTag.paused) togglePlayPause();
+            }
+            
+            // 获取随机索引（不与当前索引相同）
+            function getRandomIndex() {
+                if (musicData.length <= 1) return 0;
+                
+                let randomIndex;
+                do {
+                    randomIndex = Math.floor(Math.random() * musicData.length);
+                } while (randomIndex === currentIndex);
+                
+                return randomIndex;
+            }
+            
+            // 音频结束时处理
+            audioTag.addEventListener('ended', handleAudioEnd);
+            
+            function handleAudioEnd() {
+                if (playMode === 1) { // 单曲循环
+                    audioTag.currentTime = 0;
+                    audioTag.play();
+                } else { // 顺序播放或随机播放
+                    playNext();
+                }
+            }
+            
+            // 切换音乐列表显示
+            listBtn.addEventListener('click', toggleMusicList);
+            closeListBtn.addEventListener('click', toggleMusicList);
+            closeListOverlay.addEventListener('click', toggleMusicList);
+            
+            function toggleMusicList() {
+                musicList.classList.toggle('open');
+                closeListOverlay.classList.toggle('hidden');
+                document.body.classList.toggle('overflow-hidden');
+            }
+            
+            // 点击列表项播放音乐
+            listItems.forEach((item, index) => {
+                item.addEventListener('click', () => {
+                    currentIndex = index;
+                    updateMusicInfo(currentIndex);
+                    updateBrowserTitle();
+                    // 这里应该加载并播放选中的音频文件
+                    // audioTag.src = `path/to/music${currentIndex}.mp3`;
+                    // audioTag.play();
+                    // 模拟播放效果
+                    audioTag.currentTime = 0;
+                    if (audioTag.paused) togglePlayPause();
+                    
+                    // 在移动设备上点击后关闭列表
+                    if (window.innerWidth < 768) {
+                        toggleMusicList();
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 
 </html>
-
